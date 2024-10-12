@@ -39,7 +39,7 @@ def send_get_request(endpoint, json_response=False):
 
 def execute_script_as_root(script):
     try:
-        os.system(f"sudo gbs -c '{script}'")
+        os.system(f"sudo gbs {script}")
     except Exception as e:
         print(f"Error executing script: {e}")
 
