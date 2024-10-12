@@ -53,13 +53,28 @@ class SicOSUpdater(Gtk.ApplicationWindow):
     def check_for_updates(self):
         # Get the POINTRELEASE value from the local file
         local_file_path = f"/home/{self.username}/.update/POINTRELEASE.json"
-        with open(local_file_path, "r") as f:
-            local_point_release = json.load(f)["pointRelease"]
+        try:
+            with open(local_file_path, "r") as f:
+                local_point_release = json.load(f)["pointRelease"]
+        except FileNotFoundError:
+            self.label.set_text("Local file not found")
+            return False
+        except json.JSONDecodeError:
+            self.label.set_text("Invalid JSON in local file")
+            return False
 
         # Get the POINTRELEASE value from the remote server
         remote_url = "http://cliente.tomadahost.cloud:10060/update"
-        response = requests.get(remote_url)
-        remote_point_release = response.json()["pointRelease"]
+        try:
+            response = requests.get(remote_url)
+            response.raise_for_status()
+            remote_point_release = response.json()["pointRelease"]
+        except requests.exceptions.RequestException as e:
+            self.label.set_text(f"Error accessing remote server: {e}")
+            return False
+        except json.JSONDecodeError:
+            self.label.set_text("Invalid JSON from remote server")
+            return False
 
         # Compare the POINTRELEASE values
         if local_point_release == remote_point_release:
@@ -92,19 +107,4 @@ class Application(Gtk.Application):
 
     def do_activate(self):
         win = SicOSUpdater(application=self)
-        win.connect("destroy", win.on_destroy)
-        win.present()
-
-    def do_startup(self):
-        Gtk.Application.do_startup(self)
-        quit_action = Gio.SimpleAction.new("quit", None)
-        quit_action.connect("activate", self.quit_cb)
-        self.add_action(quit_action)
-        self.set_accels_for_action("app.quit", ["<primary>q"])
-
-    def quit_cb(self, action, param):
-        self.quit()
-
-if __name__ == '__main__':
-    app = Application('org.example.SicOSUpdater', 0)
-    app.run()
+        win.connect("destroy", win.on
