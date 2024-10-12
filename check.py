@@ -13,20 +13,26 @@ def get_default_point_release():
     return 1
 
 def initialize_point_release(local_file_path, default_point_release):
-    if os.path.exists(local_file_path):
+    try:
         with open(local_file_path, 'r') as f:
             return json.load(f)['pointRelease']
-    else:
+    except FileNotFoundError:
         point_release = default_point_release
         with open(local_file_path, 'w') as f:
             json.dump({'pointRelease': point_release}, f)
         return point_release
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON file: {e}")
+        return default_point_release
 
-def send_get_request(endpoint):
+def send_get_request(endpoint, json_response=False):
     try:
         response = requests.get(endpoint)
         response.raise_for_status()
-        return response.json()
+        if json_response:
+            return response.json()
+        else:
+            return response.text
     except requests.exceptions.RequestException as e:
         print(f"Error accessing endpoint: {e}")
         return None
@@ -50,7 +56,7 @@ def main():
     endpoint = "http://cliente.tomadahost.cloud:10060/update"
     updatesh_endpoint = "http://cliente.tomadahost.cloud:10060/updatesh"
 
-    response_json = send_get_request(endpoint)
+    response_json = send_get_request(endpoint, json_response=True)
     if response_json is None:
         return
 
@@ -58,7 +64,7 @@ def main():
         print("No update available.")
     else:
         print("Update available, downloading and executing script...")
-        updatesh_response = send_get_request(updatesh_endpoint)
+        updatesh_response = send_get_request(updatesh_endpoint, json_response=False)
         if updatesh_response is None:
             return
         script = updatesh_response
